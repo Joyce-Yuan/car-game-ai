@@ -5,7 +5,7 @@ from collections import namedtuple
 import numpy as np
 import math
 pygame.init()
-font = pygame.font.Font('arial.ttf',25)
+font = pygame.font.Font('arial/arial.ttf',25)
 
 # Reset 
 # Reward
@@ -41,6 +41,7 @@ class SnakeGameAI:
         
         #init game state
         self.reset()
+        
     def reset(self):
         self.direction = Direction.RIGHT
         self.head = Point(self.w/2,self.h/2)
