@@ -2,7 +2,7 @@ import torch
 import random 
 import numpy as np
 from collections import deque
-from snake_gameai import SnakeGameAI,Direction,Point,BLOCK_SIZE
+from car_gameai import CarGameAI,Direction,BLOCK_SIZE
 from model import Linear_QNet,QTrainer
 from Helper import plot
 MAX_MEMORY = 100_000
@@ -64,15 +64,15 @@ class Agent:
     def get_action(self,state):
         # random moves: tradeoff explotation / exploitation
         self.epsilon = 80 - self.n_game
-        final_move = [0,0,0,0,0]
+        final_move = 0
         if(random.randint(0,200)<self.epsilon):
-            move = random.randint(0,2)
-            final_move[move]=1
+            final_move = random.randint(0,4)
         else:
             state0 = torch.tensor(state,dtype=torch.float) #.cuda()
             prediction = self.model(state0) #.cuda() # prediction by model 
             move = torch.argmax(prediction).item()
-            final_move[move]=1 
+            final_move = move
+        print(f'move= {final_move}')
         return final_move
 
 def train():
@@ -81,7 +81,7 @@ def train():
     total_score = 0
     record = 0
     agent = Agent()
-    game = SnakeGameAI()
+    game = CarGameAI()
     while True:
         # Get Old state
         state_old = agent.get_state(game)
@@ -101,7 +101,7 @@ def train():
 
         if done:
             # Train long memory,plot result
-            game.reset()
+            game.start_over()
             agent.n_game += 1
             agent.train_long_memory()
             if(score > reward): # new High score 

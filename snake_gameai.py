@@ -41,7 +41,8 @@ class SnakeGameAI:
         
         #init game state
         self.reset()
-        
+
+
     def reset(self):
         self.direction = Direction.RIGHT
         self.head = Point(self.w/2,self.h/2)
@@ -75,7 +76,7 @@ class SnakeGameAI:
         self.snake.insert(0,self.head)
 
         # 3. Check if game Over
-        reward = 0  # eat food: +10 , game over: -10 , else: 0
+        reward = 0  # eat food: +10 , game over: -10, else: 0
         game_over = False 
         if(self.is_collision() or self.frame_iteration > 100*len(self.snake) ):
             game_over=True

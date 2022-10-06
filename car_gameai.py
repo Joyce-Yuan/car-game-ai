@@ -19,7 +19,7 @@ class Direction(Enum):
     DOWN = 4
     NONE = 5
  
-
+EASY = True
 BLOCK_SIZE=10
 SPEED =10
 WHITE = (255,255,255)
@@ -41,7 +41,7 @@ class Car:
         self.y = y
         self.speed = speed
 
-class CarGame:
+class CarGameAI:
     def __init__(self,w=300,h=600):
         self.w=w
         self.h=h
@@ -52,21 +52,25 @@ class CarGame:
         
         #init game state
         self.direction = Direction.NONE
-        # self.head = Point(self.w/2,self.h/2)
-        # self.snake = [self.head,
-        #               Point(self.head.x-BLOCK_SIZE,self.head.y),
-        #               Point(self.head.x-(2*BLOCK_SIZE),self.head.y)]
         self.score = 0
 
         self._reset()
+        self.frame_iteration = 0
         # self.food = None
         # self._place__food()
+    def start_over(self):
+        self.score = 0
+        self.direction = Direction.NONE
+        self._reset()
+        self.frame_iteration = 0
+
     def _reset(self):
         # self.main.x = self.w/2
         # self.main.y = self.h - 10 * BLOCK_SIZE
         self.car1 = Car(self.w/2,self.h/2 + 5 * BLOCK_SIZE, DEFAULT_SPEED)
         self.car2 = Car(self.w/2 - 2 * CAR_WID, 0, -DEFAULT_SPEED)
         self.main = Car(self.w/2, self.h/2 + 15 * BLOCK_SIZE, DEFAULT_SPEED)
+        self.most_forward = self.h/2 + 15 * BLOCK_SIZE
 
 
     # def _place__food(self):
@@ -77,35 +81,44 @@ class CarGame:
     #         self._place__food()
 
 
-    def play_step(self):
+    def play_step(self, action):
         # 1. Collect the user input
+        self.frame_iteration += 1
+
         for event in pygame.event.get():
             if(event.type == pygame.QUIT):
                 pygame.quit()
                 quit()
-            if(event.type == pygame.KEYDOWN):
-                if(event.key == pygame.K_LEFT):
-                    self.direction = Direction.LEFT
-                elif(event.key == pygame.K_RIGHT):
-                    self.direction = Direction.RIGHT
-                elif(event.key == pygame.K_UP):
-                    self.direction = Direction.UP
-                elif(event.key == pygame.K_DOWN):
-                    self.direction = Direction.DOWN
-            else:
-                self.direction = Direction.NONE
+
+            # if(event.type == pygame.KEYDOWN):
+            #     if(event.key == pygame.K_LEFT):
+            #         self.direction = Direction.LEFT
+            #     elif(event.key == pygame.K_RIGHT):
+            #         self.direction = Direction.RIGHT
+            #     elif(event.key == pygame.K_UP):
+            #         self.direction = Direction.UP
+            #     elif(event.key == pygame.K_DOWN):
+            #         self.direction = Direction.DOWN
+            # else:
+            #     self.direction = Direction.NONE
+
         # 2. Move
-        self._move(self.direction)
-        # self.snake.insert(0,self.head)
+        self._move(action)
 
         # 3. Check if game Over
+        reward = 0 # eat food: +10 , game over: -10, go forward = +0.1, else: 0
         game_over = False 
+        #reward car for moving straight
+        if (self.main.y < self.most_forward): 
+            reward = 1
         if(self._is_collision()):
             game_over=True
-            return game_over,self.score
+            reward = -10
+            return reward,game_over,self.score
         
         if(self._score()):
             self.score += 1
+            reward = 10
             self._reset()
         # 4. Place new Food or just move
         # if(self.head == self.food):
@@ -118,7 +131,7 @@ class CarGame:
         self.clock.tick(SPEED)
         # 6. Return game Over and Display Score
         
-        return game_over,self.score
+        return reward,game_over,self.score
 
     def _update_ui(self):
         self.display.fill(BLACK)
@@ -131,7 +144,7 @@ class CarGame:
         #     pygame.draw.rect(self.display,BLUE1,pygame.Rect(pt.x,pt.y,BLOCK_SIZE,BLOCK_SIZE))
         #     pygame.draw.rect(self.display,BLUE2,pygame.Rect(pt.x+4,pt.y+4,12,12))
         # pygame.draw.rect(self.display,RED,pygame.Rect(self.food.x,self.food.y,BLOCK_SIZE,BLOCK_SIZE))
-        text = font.render("Score: "+str(self.score)+'\n',True,WHITE)
+        text = font.render(f"Score: {self.score} Frame_Iteration: {self.frame_iteration}",True,WHITE)
         # text = font.render("Your speed: "+str(self.main.speed) +'\n',True,WHITE,)
         # text = font.render("Other speed: "+str(self.car1.speed)+'\n',True,WHITE)
         self.display.blit(text,[0,0])
@@ -140,9 +153,11 @@ class CarGame:
     def _score(self):
         return self.main.y < self.car1.y and self.main.x >= self.car1.x
 
-    def _move(self,direction):
+    def _move(self,action):
         # x = self.main.x
         # y = self.main.y
+        directions = [Direction.NONE, Direction.RIGHT,Direction.DOWN,Direction.LEFT,Direction.UP]
+        direction = directions[action]
         if(direction == Direction.RIGHT):
             # x+=BLOCK_SIZE
             self.main.x += BLOCK_SIZE
@@ -156,11 +171,13 @@ class CarGame:
             self.main.speed += INCREMENT
         self.main.y -= (self.main.speed - self.car1.speed) * BLOCK_SIZE
 
-        #update opposing car
-        self.car2.y += (self.main.speed) * BLOCK_SIZE
-        #probability another car shows up is around 50%
-        if (self.car2.y > self.h and random.randint(1, 10) <= 5):
-            self.car2.y = 0
+        #EASY MODE: NO OPPOSING CAR
+        if not (EASY):
+            #update opposing car
+            self.car2.y += (self.main.speed) * BLOCK_SIZE
+            #probability another car shows up is around 50%
+            if (self.car2.y > self.h and random.randint(1, 10) <= 5):
+                self.car2.y = 0
 
     def _is_collision(self):
         #hit boundary
@@ -186,15 +203,15 @@ class CarGame:
         return False
 
 
-if __name__=="__main__":
-    game = CarGame()
+# if __name__=="__main__":
+#     game = CarGameAI()
 
-    #Game loop
-    #game_over=False
-    while True:
-        game_over,score=game.play_step()
-        if(game_over == True):
-            break
-    print('Final Score',score)
+#     #Game loop
+#     #game_over=False
+#     while True:
+#         game_over,score=game.play_step()
+#         if(game_over == True):
+#             break
+#     print('Final Score',score)
 
-    pygame.quit()
+#     pygame.quit()
