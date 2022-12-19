@@ -3,7 +3,9 @@ import random
 from enum import Enum
 from collections import namedtuple
 pygame.init()
-font = pygame.font.Font('arial/arial.ttf',25)
+font = pygame.font.Font(None, 25)
+
+from button import Button
 
 # Reset 
 # Reward
@@ -42,7 +44,7 @@ class Car:
         self.speed = speed
 
 class CarGame:
-    def __init__(self,w=300,h=600):
+    def __init__(self,w=700,h=600):
         self.w=w
         self.h=h
         #init display
@@ -57,6 +59,8 @@ class CarGame:
         #               Point(self.head.x-BLOCK_SIZE,self.head.y),
         #               Point(self.head.x-(2*BLOCK_SIZE),self.head.y)]
         self.score = 0
+        self.game_over = False
+        self.quit_button = pygame.Rect(600, 500, 50, 20)
 
         self._reset()
         # self.food = None
@@ -94,15 +98,20 @@ class CarGame:
                     self.direction = Direction.DOWN
             else:
                 self.direction = Direction.NONE
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                x, y = pygame.mouse.get_pos()
+                if pygame.mouse.get_pressed()[0]:
+                    if self.quit_button.collidepoint(x, y):
+                        self.end_game()
         # 2. Move
         self._move(self.direction)
         # self.snake.insert(0,self.head)
 
         # 3. Check if game Over
-        game_over = False 
+        # game_over = False 
         if(self._is_collision()):
-            game_over=True
-            return game_over,self.score
+            self.game_over=True
+            return self.game_over,self.score
         
         if(self._score()):
             self.score += 1
@@ -118,7 +127,7 @@ class CarGame:
         self.clock.tick(SPEED)
         # 6. Return game Over and Display Score
         
-        return game_over,self.score
+        return self.game_over,self.score
 
     def _update_ui(self):
         self.display.fill(BLACK)
@@ -127,6 +136,7 @@ class CarGame:
         pygame.draw.rect(self.display, BLUE1, pygame.Rect(self.main.x, self.main.y, CAR_LEN , CAR_WID))
         pygame.draw.rect(self.display, RED, pygame.Rect(self.car1.x, self.car1.y, CAR_LEN, CAR_WID))
         pygame.draw.rect(self.display, RED, pygame.Rect(self.car2.x, self.car2.y, CAR_LEN, CAR_WID))
+        pygame.draw.rect(self.display, "pink", self.quit_button)
         # for pt in self.snake:
         #     pygame.draw.rect(self.display,BLUE1,pygame.Rect(pt.x,pt.y,BLOCK_SIZE,BLOCK_SIZE))
         #     pygame.draw.rect(self.display,BLUE2,pygame.Rect(pt.x+4,pt.y+4,12,12))
@@ -136,6 +146,9 @@ class CarGame:
         # text = font.render("Other speed: "+str(self.car1.speed)+'\n',True,WHITE)
         self.display.blit(text,[0,0])
         pygame.display.flip()
+
+    def end_game(self):
+        self.game_over = True
     
     def _score(self):
         return self.main.y < self.car1.y and self.main.x >= self.car1.x
